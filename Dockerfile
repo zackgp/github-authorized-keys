@@ -1,4 +1,15 @@
-FROM alpine:3.17
+FROM golang:1.26-alpine3.23 AS build
+
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o github-authorized-keys .
+
+
+FROM alpine:3.23
 
 WORKDIR /
 
@@ -39,6 +50,6 @@ EXPOSE 301
 RUN apk --update --no-cache add libc6-compat ca-certificates && \
     ln -s /lib /lib64
 
-COPY ./release/github-authorized-keys_linux_amd64 /usr/bin/github-authorized-keys
+COPY --from=build /app/github-authorized-keys /usr/bin/github-authorized-keys
 
 ENTRYPOINT ["github-authorized-keys"]
